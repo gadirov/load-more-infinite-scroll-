@@ -1,26 +1,68 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import { useInView } from "react-intersection-observer";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useGet } from "./hooks/useGet";
 
-function App() {
+const queryClient = new QueryClient();
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <Example />
+    </QueryClientProvider>
   );
 }
 
-export default App;
+function Example() {
+  const { ref, inView } = useInView();
+  const { status, data, error, isFetching, isFetchingNextPage, fetchNextPage } =
+    useGet();
+
+  React.useEffect(() => {
+    if (inView) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, inView]);
+
+  return (
+    <div>
+      {status === "pending" ? (
+        <p>Loading...</p>
+      ) : status === "error" ? (
+        <span>Error: {error?.message}</span>
+      ) : (
+        <>
+          {data?.pages?.map((page) =>
+            page.data.map((post: any) => (
+              <div
+                key={post.id}
+                style={{
+                  margin: "10px 0",
+                  padding: "10px",
+                  border: "1px solid #ddd",
+                }}
+              >
+                <h3>{post.title}</h3>
+                <p>{post.body}</p>
+              </div>
+            ))
+          )}
+          <div>
+            <h1
+              ref={ref}
+              // onClick={() => fetchNextPage()}
+              // disabled={!hasNextPage || isFetchingNextPage}
+            >
+              {isFetchingNextPage ? "Loading more..." : ""}
+            </h1>
+          </div>
+          <div>
+            {isFetching && !isFetchingNextPage
+              ? "Background Updating..."
+              : null}
+          </div>
+        </>
+      )}
+      <hr />
+    </div>
+  );
+}
